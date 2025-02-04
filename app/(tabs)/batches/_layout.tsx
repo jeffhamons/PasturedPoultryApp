@@ -25,10 +25,6 @@ export default function TabLayout() {
           color: 'white',
           fontSize: 20,
           fontWeight: '600',
-          // Add text shadow for better readability
-          textShadowColor: 'rgba(0, 0, 0, 0.25)',
-          textShadowOffset: { width: 0, height: 1 },
-          textShadowRadius: 2,
         },
         // Hide tab labels and use only icons
         tabBarShowLabel: false,
