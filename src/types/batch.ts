@@ -107,7 +107,31 @@ export interface Batch {
   feedTransitions: FeedTransition[];
   pastureMovements: PastureMovement[];
 }
+export interface WeightSample {
+  id: string;
+  date: Date;
+  weight: number;
+  sampleSize: number;
+  notes: string;
+}
 
+export interface MortalityRecord {
+  date: Date;
+  numberOfDeaths: number;
+  notes: string;
+}
+
+export interface MortalityModalProps {
+  isVisible: boolean;
+  onClose: () => void;
+  onSubmit: (mortality: MortalityRecord) => void;
+}
+
+export interface WeightModalProps {
+  isVisible: boolean;
+  onClose: () => void;
+  onSubmit: (weightSample: WeightSample) => void;
+}
 /**
  * Type guard to check if a value is a valid BatchStatus
  */

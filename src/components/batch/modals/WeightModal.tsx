@@ -1,35 +1,73 @@
 import React, { useState } from 'react';
-import { 
-  Modal, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet 
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import COLORS from '@/constants/Colors';
-import { WeightSample } from '@/types/batch';
 
-interface WeightModalProps {
-  isVisible: boolean;
-  onClose: () => void;
-  onSubmit: (weightSample: WeightSample) => void;
-}
+// Import the types
+import { WeightSample, WeightModalProps } from '@/types/batch';
 
-export default function WeightModal({ isVisible, onClose, onSubmit }: WeightModalProps) {
-  const [weight, setWeight] = useState('');
-  const [sampleSize, setSampleSize] = useState('');
+const WeightModal: React.FC<WeightModalProps> = ({
+  isVisible,
+  onClose,
+  onSubmit,
+}) => {
+  // Default to current date
+  const [date, setDate] = useState(new Date());
+  const [totalWeight, setTotalWeight] = useState('');
+  const [numberOfSamples, setNumberOfSamples] = useState('');
+  const [notes, setNotes] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleSubmit = () => {
+    const totalWeightNum = parseFloat(totalWeight);
+    const numSamples = parseInt(numberOfSamples);
+
+    if (isNaN(totalWeightNum) || isNaN(numSamples) || numSamples <= 0) {
+      alert(
+        'Please enter valid numbers for total weight and sample size (sample size must be greater than 0).'
+      );
+      return;
+    }
+
+    const averageWeight = totalWeightNum / numSamples;
+
     const weightSample: WeightSample = {
       id: Date.now().toString(),
-      weight: parseFloat(weight) || 0,
-      sampleSize: parseInt(sampleSize) || 0,
+      date: date,
+      weight: averageWeight,
+      sampleSize: numSamples,
+      notes: notes.trim(),
     };
 
-    onSubmit(weightSample);
-    setWeight('');
-    setSampleSize('');
+    if (typeof onSubmit === 'function') {
+      onSubmit(weightSample);
+    } else {
+      console.warn("onSubmit is not a function. Check your props.");
+    }
+
+    // Reset form
+    setDate(new Date());
+    setTotalWeight('');
+    setNumberOfSamples('');
+    setNotes('');
+    onClose();
+  };
+
+  // Simple date formatter that only shows the date.
+  const formattedDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   return (
@@ -41,41 +79,99 @@ export default function WeightModal({ isVisible, onClose, onSubmit }: WeightModa
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.heading}>Record Weight Sample</Text>
-          
+          <Text style={styles.heading}>Log Weight</Text>
+
+          {/* Date Picker */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Average Weight (lbs)</Text>
+            <Text style={styles.label}>Date</Text>
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={date}
+                mode="date" // Only date selection
+                display="default"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    setDate(selectedDate);
+                  }
+                }}
+                style={styles.datePicker}
+              />
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.dateButton}
+                >
+                  <Text style={styles.dateButtonText}>{formattedDate(date)}</Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setDate(selectedDate);
+                      }
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Total Weight Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Total Weight (ounces)</Text>
             <TextInput
               style={styles.input}
-              value={weight}
-              onChangeText={setWeight}
-              keyboardType="decimal-pad"
-              placeholder="Enter average weight"
+              value={totalWeight}
+              onChangeText={setTotalWeight}
+              keyboardType="numeric"
+              placeholder="Enter total weight"
             />
           </View>
 
+          {/* Number of Samples Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Number of Birds Sampled</Text>
+            <Text style={styles.label}>Number of Samples</Text>
             <TextInput
               style={styles.input}
-              value={sampleSize}
-              onChangeText={setSampleSize}
-              keyboardType="number-pad"
+              value={numberOfSamples}
+              onChangeText={setNumberOfSamples}
+              keyboardType="numeric"
               placeholder="Enter sample size"
             />
           </View>
 
+          {/* Notes Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Notes</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Add any relevant notes"
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+
+          {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]} 
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
               onPress={onClose}
+              accessibilityLabel="Cancel recording weight"
             >
               <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
+              accessibilityLabel="Submit weight record"
             >
               <Text style={[styles.buttonText, styles.submitText]}>Submit</Text>
             </TouchableOpacity>
@@ -84,7 +180,7 @@ export default function WeightModal({ isVisible, onClose, onSubmit }: WeightModa
       </View>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   centeredView: {
@@ -102,7 +198,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -129,6 +225,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  datePicker: {
+    width: '100%',
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: COLORS.darkBrown,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -159,3 +272,5 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 });
+
+export default WeightModal;

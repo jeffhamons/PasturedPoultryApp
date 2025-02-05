@@ -1,46 +1,62 @@
 import React, { useState } from 'react';
-import { 
-  Modal, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet 
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import COLORS from '@/constants/Colors';
 
-interface MortalityRecord {
-  date: Date;
-  count: number;
-  notes: string;
-}
+// Import the types
+import { MortalityRecord, MortalityModalProps } from '@/types/batch';
 
-interface MortalityModalProps {
-  isVisible: boolean;
-  onClose: () => void;
-  onSubmit: (mortality: MortalityRecord) => void;
-}
-
-const MortalityModal: React.FC<MortalityModalProps> = ({ 
-  isVisible, 
-  onClose, 
-  onSubmit 
+const MortalityModal: React.FC<MortalityModalProps> = ({
+  isVisible,
+  onClose,
+  onSubmit,
 }) => {
-  const [count, setCount] = useState('');
+  // Default to the current date
+  const [date, setDate] = useState(new Date());
+  const [numberOfDeaths, setNumberOfDeaths] = useState('');
   const [notes, setNotes] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleSubmit = () => {
-    const mortalityData: MortalityRecord = {
-      date: new Date(),
-      count: parseInt(count) || 0,
-      notes: notes.trim()
-    };
+    const numDeaths = parseInt(numberOfDeaths, 10);
 
-    onSubmit(mortalityData);
+    if (isNaN(numDeaths)) {
+      alert('Number of deaths must be a number.');
+      return;
+    }
+
+    if (typeof onSubmit === 'function') {
+      onSubmit({
+        date: date,
+        numberOfDeaths: numDeaths,
+        notes: notes.trim(),
+      });
+    } else {
+      console.warn("onSubmit is not a function. Check your props.");
+    }
+
     // Reset form
-    setCount('');
+    setDate(new Date());
+    setNumberOfDeaths('');
     setNotes('');
     onClose();
+  };
+
+  // Simplified date formatter to display only the date
+  const formattedDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   return (
@@ -53,18 +69,60 @@ const MortalityModal: React.FC<MortalityModalProps> = ({
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.heading}>Record Mortality</Text>
-          
+
+          {/* Date Picker */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Date</Text>
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={date}
+                mode="date" // Only date selection
+                display="default"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    setDate(selectedDate);
+                  }
+                }}
+                style={styles.datePicker}
+              />
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.dateButton}
+                >
+                  <Text style={styles.dateButtonText}>{formattedDate(date)}</Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setDate(selectedDate);
+                      }
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Number of Deaths Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Number of Deaths</Text>
             <TextInput
               style={styles.input}
-              value={count}
-              onChangeText={setCount}
+              value={numberOfDeaths}
+              onChangeText={setNumberOfDeaths}
               keyboardType="numeric"
               placeholder="Enter number"
             />
           </View>
 
+          {/* Notes Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Notes</Text>
             <TextInput
@@ -77,17 +135,20 @@ const MortalityModal: React.FC<MortalityModalProps> = ({
             />
           </View>
 
+          {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]} 
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
               onPress={onClose}
+              accessibilityLabel="Cancel recording mortality"
             >
               <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
+              accessibilityLabel="Submit mortality record"
             >
               <Text style={[styles.buttonText, styles.submitText]}>Submit</Text>
             </TouchableOpacity>
@@ -114,7 +175,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -145,6 +206,19 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  datePicker: {
+    width: '100%',
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: COLORS.darkBrown,
   },
   buttonContainer: {
     flexDirection: 'row',
